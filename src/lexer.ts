@@ -141,6 +141,38 @@ export class Lexer {
         }
     }
 
+    private readNumber(): Token {
+        let result = '';
+        const startColumn = this.column;
+        const startLine = this.line;
+        const startOffset = this.position;
+
+        while (this.currentChar && /\d/.test(this.currentChar)) {
+            result += this.currentChar;
+            this.advance();
+        }
+
+        if (this.currentChar === '.' && this.peek() && /\d/.test(this.peek()!)) {
+            result += this.currentChar;
+            this.advance();
+
+            while (this.currentChar && /\d/.test(this.currentChar)) {
+                result += this.currentChar;
+                this.advance();
+            }
+        }
+
+        return {
+            type: TokenType.NUMBER,
+            value: result,
+            location: {
+                line: startLine,
+                column: startColumn,
+                offset: startOffset
+            }
+        };
+    }
+
 
     public nextToken(): Token {
         while (this.currentChar !== null) {
