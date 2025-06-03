@@ -86,3 +86,176 @@ const KEYWORDS: { [key: string]: TokenType } = {
     'false': TokenType.FALSE
 };
 
+export class Lexer {
+    private source: string;
+    private position: number = 0;
+    private line: number = 1;
+    private column: number = 1;
+    private currentChar: string | null;
+
+    constructor(source: string) {
+        this.source = source;
+        this.currentChar = this.source.length > 0 ? this.source[0] : null;
+    }
+
+    private advance(): void {
+        this.position++;
+        if (this.currentChar === '\n') {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column++;
+        }
+        this.currentChar = this.position < this.source.length ? this.source[this.position] : null;
+    }
+
+    private peek(): string | null {
+        const peekPos = this.position + 1;
+        return peekPos < this.source.length ? this.source[peekPos] : null;
+    }
+
+    private skipWhitespace(): void {
+        while (this.currentChar && /\s/.test(this.currentChar)) {
+            this.advance();
+        }
+    }
+
+    private skipComment(): void {
+        if (this.currentChar as string === '{') {
+            while (this.currentChar && (this.currentChar as string) !== '}') {
+                this.advance();
+            }
+            if (this.currentChar === '}') {
+                this.advance();
+            }
+        } else if (this.currentChar === '(' && this.peek() === '*') {
+            this.advance(); // Skip (
+            this.advance(); // Skip *
+            while (this.currentChar && !(this.currentChar as string === '*' && this.peek() === ')')) {
+                this.advance();
+            }
+            if (this.currentChar) {
+                this.advance(); // Skip *
+                this.advance(); // Skip )
+            }
+        }
+    }
+
+
+    public nextToken(): Token {
+        while (this.currentChar !== null) {
+            // Skip whitespace
+            if (/\s/.test(this.currentChar)) {
+                this.skipWhitespace();
+                continue;
+            }
+
+            // Skip comments
+            if (this.currentChar === '{' || (this.currentChar === '(' && this.peek() === '*')) {
+                this.skipComment();
+                continue;
+            }
+
+            // Location for current token
+            const location = {
+                line: this.line,
+                column: this.column,
+                offset: this.position
+            };
+
+            // Handle numbers
+            if (/\d/.test(this.currentChar)) {
+                return this.readNumber();
+            }
+
+            // Handle strings
+            if (this.currentChar === '\'') {
+                return this.readString();
+            }
+
+            // Handle identifiers and keywords
+            if (/[a-zA-Z_]/.test(this.currentChar)) {
+                return this.readIdentifier();
+            }
+
+            // Handle operators and symbols
+            let token: Token | null = null;
+            switch (this.currentChar) {
+                case '+':
+                    token = { type: TokenType.PLUS, value: '+', location };
+                    break;
+                case '-':
+                    token = { type: TokenType.MINUS, value: '-', location };
+                    break;
+                case '*':
+                    token = { type: TokenType.MULTIPLY, value: '*', location };
+                    break;
+                case '/':
+                    token = { type: TokenType.DIVIDE, value: '/', location };
+                    break;
+                case '=':
+                    token = { type: TokenType.EQUALS, value: '=', location };
+                    break;
+                case '<':
+                    if (this.peek() === '>') {
+                        this.advance();
+                        token = { type: TokenType.NOT_EQUALS, value: '<>', location };
+                    } else if (this.peek() === '=') {
+                        this.advance();
+                        token = { type: TokenType.LESS_EQUALS, value: '<=', location };
+                    } else {
+                        token = { type: TokenType.LESS_THAN, value: '<', location };
+                    }
+                    break;
+                case '>':
+                    if (this.peek() === '=') {
+                        this.advance();
+                        token = { type: TokenType.GREATER_EQUALS, value: '>=', location };
+                    } else {
+                        token = { type: TokenType.GREATER_THAN, value: '>', location };
+                    }
+                    break;
+                case ':':
+                    if (this.peek() === '=') {
+                        this.advance();
+                        token = { type: TokenType.ASSIGN, value: ':=', location };
+                    } else {
+                        token = { type: TokenType.COLON, value: ':', location };
+                    }
+                    break;
+                case ';':
+                    token = { type: TokenType.SEMICOLON, value: ';', location };
+                    break;
+                case ',':
+                    token = { type: TokenType.COMMA, value: ',', location };
+                    break;
+                case '.':
+                    token = { type: TokenType.DOT, value: '.', location };
+                    break;
+                case '(':
+                    token = { type: TokenType.LPAREN, value: '(', location };
+                    break;
+                case ')':
+                    token = { type: TokenType.RPAREN, value: ')', location };
+                    break;
+            }
+
+            if (token) {
+                this.advance();
+                return token;
+            }
+
+            throw new Error(`Unexpected character: ${this.currentChar} at line ${this.line}, column ${this.column}`);
+        }
+
+        return {
+            type: TokenType.EOF,
+            value: '',
+            location: {
+                line: this.line,
+                column: this.column,
+                offset: this.position
+            }
+        };
+    }
+} 
