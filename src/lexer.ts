@@ -212,6 +212,31 @@ export class Lexer {
         };
     }
 
+    private readIdentifier(): Token {
+        let result = '';
+        const startColumn = this.column;
+        const startLine = this.line;
+        const startOffset = this.position;
+
+        while (this.currentChar && /[a-zA-Z0-9_]/.test(this.currentChar)) {
+            result += this.currentChar;
+            this.advance();
+        }
+
+        const lowerResult = result.toLowerCase();
+        const type = KEYWORDS[lowerResult] || TokenType.IDENTIFIER;
+
+        return {
+            type,
+            value: result,
+            location: {
+                line: startLine,
+                column: startColumn,
+                offset: startOffset
+            }
+        };
+    }
+
     public nextToken(): Token {
         while (this.currentChar !== null) {
             // Skip whitespace
