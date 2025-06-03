@@ -173,6 +173,44 @@ export class Lexer {
         };
     }
 
+    private readString(): Token {
+        let result = '';
+        const startColumn = this.column;
+        const startLine = this.line;
+        const startOffset = this.position;
+        
+        // Skip the opening quote
+        this.advance();
+
+        while (this.currentChar && this.currentChar !== '\'') {
+            if (this.currentChar === '\'') {
+                if (this.peek() === '\'') {
+                    result += this.currentChar;
+                    this.advance(); // Skip first quote
+                    this.advance(); // Skip second quote
+                    continue;
+                }
+                break;
+            }
+            result += this.currentChar;
+            this.advance();
+        }
+
+        // Skip the closing quote
+        if (this.currentChar === '\'') {
+            this.advance();
+        }
+
+        return {
+            type: TokenType.STRING_LITERAL,
+            value: result,
+            location: {
+                line: startLine,
+                column: startColumn,
+                offset: startOffset
+            }
+        };
+    }
 
     public nextToken(): Token {
         while (this.currentChar !== null) {
